@@ -1,0 +1,42 @@
+﻿<Window x:Name="window" x:Class="CBSync.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:CBSync"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="350" Width="525">
+    
+    <Grid>
+        <ProgressBar Name="pb_LoadStatus" HorizontalAlignment="Left" Height="16" Margin="10,293,0,0" VerticalAlignment="Top" Width="497"/>
+        <DataGrid Name="dg_Hosts" HorizontalAlignment="Left" Height="278" Margin="10,10,0,0" VerticalAlignment="Top" Width="373"
+                  AutoGenerateColumns="False" ItemsSource="{Binding MyList, ElementName=window}"
+                  CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False">
+            <DataGrid.Resources>
+                <Style TargetType="{x:Type DataGridColumnHeader}">
+                    <Setter Property="HorizontalContentAlignment" Value="Center" />
+                </Style>
+            </DataGrid.Resources>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="IP" Binding="{Binding Path=IP}" />
+                <DataGridTextColumn Header="Host" Binding="{Binding Path=Host}" />
+                <DataGridTextColumn Header="State" Binding="{Binding Path=SyncState}" Width="38" >
+                    <DataGridTextColumn.ElementStyle>
+                        <Style>
+                            <Setter Property="TextBlock.TextAlignment" Value="Center" />
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTemplateColumn Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Click="SyncButton_Click">Sync</Button>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+        <Button Name="btn_Sort" Content="Sort Hosts" HorizontalAlignment="Left" Margin="388,10,0,0" VerticalAlignment="Top" Width="119" Height="24"/>
+
+    </Grid>
+</Window>
