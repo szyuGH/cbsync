@@ -16,6 +16,8 @@ namespace CBSync
 
         private IntPtr nextClipboardViewer;
         private IntPtr handle;
+
+        public event Action ClipboardChanged;
         
         public ClipboardMonitor(IntPtr handle)
         {
@@ -34,7 +36,7 @@ namespace CBSync
             switch (msg)
             {
                 case WM_DRAWCLIPBOARD:
-                    DisplayClipboard();
+                    ClipboardChanged?.Invoke();
                     SendMessage(nextClipboardViewer, msg, wParam, lParam);
                     break;
                 case WM_CHANGECBCHAIN:
@@ -46,11 +48,7 @@ namespace CBSync
             }
             return IntPtr.Zero;
         }
-
-        private void DisplayClipboard()
-        {
-            Console.WriteLine(Clipboard.GetText());
-        }
+        
 
         [DllImport("User32.dll")]
         private static extern int SetClipboardViewer(int hWndNewViewer);

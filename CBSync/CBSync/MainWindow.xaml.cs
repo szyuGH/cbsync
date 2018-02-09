@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -18,6 +19,13 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using ToastNotifications;
+using ToastNotifications.Core;
+using ToastNotifications.Lifetime;
+using ToastNotifications.Messages;
+using ToastNotifications.Position;
+using Windows.Data.Xml.Dom;
+using Windows.UI.Notifications;
 
 namespace CBSync
 {
@@ -31,18 +39,37 @@ namespace CBSync
         private IPNetwork network;
         private ClipboardMonitor clipboardMonitor;
 
+        Notifier not;
+
         public MainWindow()
         {
             InitializeComponent();
-            Task.Run(() => LoadData());
+            not = new Notifier(cfg =>
+            {
+                cfg.PositionProvider = new WindowPositionProvider(
+                    parentWindow: Application.Current.MainWindow,
+                    corner: Corner.TopRight,
+                    offsetX: 10,
+                    offsetY: 10);
+                cfg.LifetimeSupervisor = new TimeAndCountBasedLifetimeSupervisor(
+                    notificationLifetime: TimeSpan.FromSeconds(3),
+                    maximumNotificationCount: MaximumNotificationCount.FromCount(5));
+                cfg.Dispatcher = Application.Current.Dispatcher;
+            });
+
+            
+
+            //Task.Run(() => LoadData());
             IntPtr handle = new WindowInteropHelper(this).EnsureHandle();
             clipboardMonitor = new ClipboardMonitor(handle);
+            clipboardMonitor.ClipboardChanged += OnClipboardChange;
         }
-
         
+
         protected override void OnClosing(CancelEventArgs e)
         {
             clipboardMonitor.Dispose();
+            not.Dispose();
             base.OnClosing(e);
         }
 
@@ -100,29 +127,71 @@ namespace CBSync
             
         }
 
-        private void SyncButton_Click(object sender, RoutedEventArgs e)
+        private void SyncToButton_Click(object sender, RoutedEventArgs e)
         {
-            NetworkHost host = null;
+            NetworkHost host = EvaluateButtonClickNetworkHost(sender);
+            // TODO: Sync To
+        }
+
+        private void SyncFromButton_Click(object sender, RoutedEventArgs e)
+        {
+            NetworkHost host = EvaluateButtonClickNetworkHost(sender);
+            
+            // TODO: Sync From
+        }
+
+        private NetworkHost EvaluateButtonClickNetworkHost(object sender)
+        {
             for (var vis = sender as Visual; vis != null; vis = VisualTreeHelper.GetParent(vis) as Visual)
             {
                 if (vis is DataGridRow)
                 {
                     var row = (DataGridRow)vis;
-                    host = (NetworkHost)row.DataContext;
-                    break;
+                    return (NetworkHost)row.DataContext;
                 }
             }
-
-
-            // TODO: Sync
+            return null;
         }
 
         private void btn_Sort_Click(object sender, RoutedEventArgs e)
         {
-            MyList.Sort(i => i.IP, new RowComp());
-        }
-        
+            XmlDocument doc = ToastNotificationManager.GetTemplateContent(ToastTemplateType.ToastText01);
+            XmlNodeList stringElements = doc.GetElementsByTagName("text");
+            for (int i = 0; i < stringElements.Count; i++)
+            {
+                stringElements[i].AppendChild(doc.CreateTextNode("Line " + i));
+            }
 
+            ToastNotification toast = new ToastNotification(doc);
+            toast.Activated += ToastActivated;
+            ToastNotificationManager.CreateToastNotifier("BLUBB").Show(toast);
+            //MyList.Sort(i => i.IP, new RowComp());
+        }
+
+        private void ToastActivated(ToastNotification sender, object e)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                Activate();
+            });
+        }
+
+        private void OnClipboardChange()
+        {
+            IDataObject dobj = Clipboard.GetDataObject();
+            if (dobj != null)
+            {
+                List<object> objs = new List<object>();
+                for (int i = 0; i < dobj.GetFormats().Length; i++)
+                {
+                    objs.Add(dobj.GetData(dobj.GetFormats()[i]));
+                }
+                Console.WriteLine("Types: {0}\nData:\n\t- {1}\n=================================\n",
+                    string.Join(", ", dobj.GetFormats()), string.Join("\n\t- ", objs.Select(o => o.ToString() ?? "NULL")));
+            }
+            
+            // TODO: sync when synchost available
+        }
 
         public class NetworkHost
         {
