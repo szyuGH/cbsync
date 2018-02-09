@@ -19,7 +19,7 @@
             </DataGrid.Resources>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="IP" Binding="{Binding Path=IP}" />
-                <DataGridTextColumn Header="Host" Binding="{Binding Path=Host}" />
+                <DataGridTextColumn Header="Host" Binding="{Binding Path=HostName}" />
                 <DataGridTextColumn Header="State" Binding="{Binding Path=SyncState}" Width="38" >
                     <DataGridTextColumn.ElementStyle>
                         <Style>
@@ -36,7 +36,7 @@
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
-        <Button Name="btn_Sort" Content="Sort Hosts" HorizontalAlignment="Left" Margin="388,10,0,0" VerticalAlignment="Top" Width="119" Height="24"/>
+        <Button Name="btn_Sort" Content="Sort Hosts" HorizontalAlignment="Left" Margin="388,10,0,0" VerticalAlignment="Top" Width="119" Height="24" Click="btn_Sort_Click"/>
 
     </Grid>
 </Window>
