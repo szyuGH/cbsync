@@ -13,6 +13,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
@@ -28,27 +29,21 @@ namespace CBSync
         public ObservableCollection<NetworkHost> MyList { get; set; } = new ObservableCollection<NetworkHost>();
 
         private IPNetwork network;
+        private ClipboardMonitor clipboardMonitor;
 
         public MainWindow()
         {
             InitializeComponent();
-
-
             Task.Run(() => LoadData());
+            IntPtr handle = new WindowInteropHelper(this).EnsureHandle();
+            clipboardMonitor = new ClipboardMonitor(handle);
         }
 
-        private void Test()
+        
+        protected override void OnClosing(CancelEventArgs e)
         {
-            Application.Current.Dispatcher.Invoke(new Action(() =>
-            {
-                MyList.Add(new NetworkHost()
-                {
-                    IP = "123.123.123.123",
-                    HostName = "Bum",
-                    SyncState = "X",
-                });
-            }));
-            
+            clipboardMonitor.Dispose();
+            base.OnClosing(e);
         }
 
         private async void LoadData()
@@ -126,6 +121,8 @@ namespace CBSync
         {
             MyList.Sort(i => i.IP, new RowComp());
         }
+        
+
 
         public class NetworkHost
         {
