@@ -34,13 +34,15 @@ namespace CBSync
                 UnicastIPAddressInformation ownIp = ni.GetIPProperties().UnicastAddresses
                     .Where(i => i.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
                     .FirstOrDefault();
-
-                network = new IPNetwork(ownIp.Address, ownIp.IPv4Mask);
-
-                Application.Current.Dispatcher.Invoke(() => progressBar.Maximum += network.HostCount);
-                foreach (IPAddress ip in network.IterateUsableIPs())
+                if (ownIp != null)
                 {
-                    await Task.Factory.StartNew(() => LoadTask(ip, list));
+                    network = new IPNetwork(ownIp.Address, ownIp.IPv4Mask);
+
+                    Application.Current.Dispatcher.Invoke(() => progressBar.Maximum += network.HostCount);
+                    foreach (IPAddress ip in network.IterateUsableIPs())
+                    {
+                        await Task.Factory.StartNew(() => LoadTask(ip, list));
+                    }
                 }
             }
         }
