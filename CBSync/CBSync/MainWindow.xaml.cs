@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Text;
@@ -40,7 +42,7 @@ namespace CBSync
         {
             InitializeComponent();
 
-            Task.Run(() => LoadData());
+            Task.Run(() => new HostLoader(pb_LoadStatus, MyList, OnHostsLoaded));
             IntPtr handle = new WindowInteropHelper(this).EnsureHandle();
             clipboardMonitor = new ClipboardMonitor(handle);
             clipboardMonitor.ClipboardChanged += OnClipboardChange;
@@ -53,6 +55,12 @@ namespace CBSync
             ni.ShowBalloonTip(5000, "test", "hello", System.Windows.Forms.ToolTipIcon.Info);
         }
         
+        private void OnHostsLoaded(ICollection<NetworkHost> hosts)
+        {
+            Console.WriteLine("Finished loading hosts");
+            // TODO: check hosts, add new ones to mylist, remove deleted ones and maintain the other
+            
+        }
 
         protected override void OnClosing(CancelEventArgs e)
         {
@@ -60,59 +68,84 @@ namespace CBSync
             base.OnClosing(e);
         }
 
-        private async void LoadData()
-        {
-            foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces().Where(i => i.NetworkInterfaceType != NetworkInterfaceType.Loopback && i.OperationalStatus == OperationalStatus.Up))
-            {
-                UnicastIPAddressInformation ownIp = ni.GetIPProperties().UnicastAddresses
-                    .Where(i => i.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                    .FirstOrDefault();
+        //private async void LoadData(ICollection<NetworkHost> list)
+        //{
+        //    Application.Current.Dispatcher.Invoke(() => pb_LoadStatus.Maximum = 0);
+        //    foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces().Where(i => i.NetworkInterfaceType != NetworkInterfaceType.Loopback && i.OperationalStatus == OperationalStatus.Up))
+        //    {
+        //        UnicastIPAddressInformation ownIp = ni.GetIPProperties().UnicastAddresses
+        //            .Where(i => i.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        //            .FirstOrDefault();
 
-                network = new IPNetwork(ownIp.Address, ownIp.IPv4Mask);
+        //        network = new IPNetwork(ownIp.Address, ownIp.IPv4Mask);
 
-                Application.Current.Dispatcher.Invoke(() => pb_LoadStatus.Maximum = network.HostCount);
-                foreach (IPAddress ip in network.IterateUsableIPs())
-                {
-                    await Task.Factory.StartNew(() => LoadTask(ip));
-                }
-            }
-        }
+        //        Application.Current.Dispatcher.Invoke(() => pb_LoadStatus.Maximum += network.HostCount);
+        //        foreach (IPAddress ip in network.IterateUsableIPs())
+        //        {
+        //            await Task.Factory.StartNew(() => LoadTask(ip, list));
+        //        }
+        //    }
+        //}
 
-        private async void LoadTask(IPAddress ip)
-        {
-            Ping ping = new Ping();
-            PingReply res = await ping.SendPingAsync(ip, 100);
-            if (res.Status == IPStatus.Success)
-            {
-                string hostname = "";
-                try
-                {
-                    IPHostEntry entry = await Dns.GetHostEntryAsync(ip);
-                    hostname = entry.HostName;
-                }
-                catch (Exception)
-                {
-                    hostname = "";
-                }
-                Application.Current.Dispatcher.Invoke(() => MyList.Add(new NetworkHost()
-                {
-                    IP = ip.ToString(),
-                    HostName = hostname,
-                    SyncState = "X",
-                }));
-                
-            }
-            Application.Current.Dispatcher.Invoke(() => pb_LoadStatus.Value++);
+        //private async void LoadTask(IPAddress ip, ICollection<NetworkHost> list)
+        //{
+        //    Ping ping = new Ping();
+        //    PingReply res = await ping.SendPingAsync(ip, 100);
+        //    if (res.Status == IPStatus.Success)
+        //    {
+        //        string hostname = "";
+        //        try
+        //        {
+        //            IPHostEntry entry = await Dns.GetHostEntryAsync(ip);
+        //            hostname = entry.HostName;
+        //        }
+        //        catch (Exception)
+        //        {
+        //            hostname = "";
+        //        }
+
+        //        HttpWebRequest pingRequest = (HttpWebRequest)WebRequest.Create(string.Format("http://{0}:9000/api/Sync/GetPing", ip.ToString()));
+        //        pingRequest.ContentType = "application/json";
+        //        pingRequest.Method = "POST";
+        //        pingRequest.Timeout = 200;
+        //        try
+        //        {
+        //            using (var sw = new StreamWriter(pingRequest.GetRequestStream()))
+        //            {
+        //                string req = "";
+        //                sw.Write(req);
+        //                sw.Flush();
+        //            }
+        //            HttpWebResponse pingResponse = (HttpWebResponse)pingRequest.GetResponse();
+        //            if (pingResponse.StatusCode == HttpStatusCode.OK)
+        //            {
+        //                Application.Current.Dispatcher.Invoke(() => list.Add(new NetworkHost()
+        //                {
+        //                    IP = ip.ToString(),
+        //                    HostName = hostname,
+        //                    SyncState = "-",
+        //                }));
+        //            }
+        //        }
+        //        catch (Exception)
+        //        {
+        //        }
 
 
-            Application.Current.Dispatcher.Invoke(() => {
-                if (pb_LoadStatus.Value >= pb_LoadStatus.Maximum)
-                {
-                    Application.Current.Dispatcher.Invoke(() => pb_LoadStatus.Value = 0);
-                }
-            });
+
+
+        //    }
+        //    Application.Current.Dispatcher.Invoke(() => pb_LoadStatus.Value++);
+
+
+        //    Application.Current.Dispatcher.Invoke(() => {
+        //        if (pb_LoadStatus.Value >= pb_LoadStatus.Maximum)
+        //        {
+        //            Application.Current.Dispatcher.Invoke(() => pb_LoadStatus.Value = 0);
+        //        }
+        //    });
             
-        }
+        //}
 
         private void SyncToButton_Click(object sender, RoutedEventArgs e)
         {
@@ -144,7 +177,13 @@ namespace CBSync
         {
             MyList.Sort(i => i.IP, new RowComp());
         }
-        
+
+        private void btn_Refresh_Click(object sender, RoutedEventArgs e)
+        {
+            List<NetworkHost> refreshedHosts = new List<NetworkHost>();
+            Task.Run(() => new HostLoader(pb_LoadStatus, refreshedHosts, OnHostsLoaded));
+        }
+
 
         private void OnClipboardChange()
         {
@@ -163,12 +202,7 @@ namespace CBSync
             // TODO: sync when synchost available
         }
 
-        public class NetworkHost
-        {
-            public string IP { get; set; }
-            public string HostName { get; set; }
-            public string SyncState { get; set; }
-        }
+       
 
         public class RowComp : IComparer<string>
         {

@@ -44,6 +44,7 @@
             </DataGrid.Columns>
         </DataGrid>
         <Button Name="btn_Sort" Content="Sort Hosts" HorizontalAlignment="Left" Margin="388,10,0,0" VerticalAlignment="Top" Width="119" Height="24" Click="btn_Sort_Click"/>
+        <Button x:Name="btn_RefreshHosts" Content="Refresh Hosts" HorizontalAlignment="Left" Margin="388,39,0,0" VerticalAlignment="Top" Width="119" Height="24" Click="btn_Refresh_Click"/>
 
     </Grid>
 </Window>
