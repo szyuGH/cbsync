@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Drawing;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -19,13 +20,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using ToastNotifications;
-using ToastNotifications.Core;
-using ToastNotifications.Lifetime;
-using ToastNotifications.Messages;
-using ToastNotifications.Position;
-using Windows.Data.Xml.Dom;
-using Windows.UI.Notifications;
+
+using NotifyIcon = System.Windows.Forms.NotifyIcon;
 
 namespace CBSync
 {
@@ -38,38 +34,29 @@ namespace CBSync
 
         private IPNetwork network;
         private ClipboardMonitor clipboardMonitor;
-
-        Notifier not;
+        
 
         public MainWindow()
         {
             InitializeComponent();
-            not = new Notifier(cfg =>
-            {
-                cfg.PositionProvider = new WindowPositionProvider(
-                    parentWindow: Application.Current.MainWindow,
-                    corner: Corner.TopRight,
-                    offsetX: 10,
-                    offsetY: 10);
-                cfg.LifetimeSupervisor = new TimeAndCountBasedLifetimeSupervisor(
-                    notificationLifetime: TimeSpan.FromSeconds(3),
-                    maximumNotificationCount: MaximumNotificationCount.FromCount(5));
-                cfg.Dispatcher = Application.Current.Dispatcher;
-            });
 
-            
-
-            //Task.Run(() => LoadData());
+            Task.Run(() => LoadData());
             IntPtr handle = new WindowInteropHelper(this).EnsureHandle();
             clipboardMonitor = new ClipboardMonitor(handle);
             clipboardMonitor.ClipboardChanged += OnClipboardChange;
+
+
+            // Notification Test
+            NotifyIcon ni = new NotifyIcon();
+            ni.Icon = SystemIcons.Application;
+            ni.Visible = true;
+            ni.ShowBalloonTip(5000, "test", "hello", System.Windows.Forms.ToolTipIcon.Info);
         }
         
 
         protected override void OnClosing(CancelEventArgs e)
         {
             clipboardMonitor.Dispose();
-            not.Dispose();
             base.OnClosing(e);
         }
 
@@ -103,7 +90,7 @@ namespace CBSync
                     IPHostEntry entry = await Dns.GetHostEntryAsync(ip);
                     hostname = entry.HostName;
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     hostname = "";
                 }
@@ -155,26 +142,9 @@ namespace CBSync
 
         private void btn_Sort_Click(object sender, RoutedEventArgs e)
         {
-            XmlDocument doc = ToastNotificationManager.GetTemplateContent(ToastTemplateType.ToastText01);
-            XmlNodeList stringElements = doc.GetElementsByTagName("text");
-            for (int i = 0; i < stringElements.Count; i++)
-            {
-                stringElements[i].AppendChild(doc.CreateTextNode("Line " + i));
-            }
-
-            ToastNotification toast = new ToastNotification(doc);
-            toast.Activated += ToastActivated;
-            ToastNotificationManager.CreateToastNotifier("BLUBB").Show(toast);
-            //MyList.Sort(i => i.IP, new RowComp());
+            MyList.Sort(i => i.IP, new RowComp());
         }
-
-        private void ToastActivated(ToastNotification sender, object e)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                Activate();
-            });
-        }
+        
 
         private void OnClipboardChange()
         {
