@@ -11,6 +11,7 @@ namespace CBSync.Controllers
 {
     public class SyncController : ApiController
     {
+        [HttpPost]
         public HttpResponseMessage GetPing()
         {
             return new HttpResponseMessage(System.Net.HttpStatusCode.OK);

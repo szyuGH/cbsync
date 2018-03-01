@@ -64,38 +64,39 @@ namespace CBSync
                     hostname = "";
                 }
 
-                //HttpWebRequest pingRequest = (HttpWebRequest)WebRequest.Create(string.Format("http://{0}:9000/api/Sync/GetPing", ip.ToString()));
-                //pingRequest.ContentType = "application/json";
-                //pingRequest.Method = "POST";
-                //pingRequest.Timeout = 200;
-                //try
-                //{
-                //    using (var sw = new StreamWriter(pingRequest.GetRequestStream()))
-                //    {
-                //        string req = "";
-                //        sw.Write(req);
-                //        sw.Flush();
-                //    }
-                //    HttpWebResponse pingResponse = (HttpWebResponse)pingRequest.GetResponse();
-                //    if (pingResponse.StatusCode == HttpStatusCode.OK)
-                //    {
+                HttpWebRequest pingRequest = (HttpWebRequest)WebRequest.Create(string.Format("http://{0}:9000/api/Sync/GetPing", ip.ToString()));
+                pingRequest.ContentType = "application/json";
+                pingRequest.Method = "POST";
+                pingRequest.Timeout = 200;
+                try
+                {
+                    using (var sw = new StreamWriter(pingRequest.GetRequestStream()))
+                    {
+                        string req = "";
+                        sw.Write(req);
+                        sw.Flush();
+                    }
+                    HttpWebResponse pingResponse = (HttpWebResponse)pingRequest.GetResponse();
+                    if (pingResponse.StatusCode == HttpStatusCode.OK)
+                    {
                         Application.Current.Dispatcher.Invoke(() => list.Add(new NetworkHost()
                         {
                             IP = ip.ToString(),
                             HostName = hostname,
                             SyncState = "-",
                         }));
-                    //}
-                //}
-                //catch (Exception)
-                //{
-                //}
-                
+                    }
+                }
+                catch (Exception)
+                {
+                }
+
             }
             Application.Current.Dispatcher.Invoke(() => progressBar.Value++);
 
 
-            Application.Current.Dispatcher.Invoke(() => {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
                 if (progressBar.Value >= progressBar.Maximum)
                 {
                     Application.Current.Dispatcher.Invoke(() => progressBar.Value = 0);
