@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -26,7 +27,7 @@ namespace CBSync
             LoadData(list);
         }
 
-        private async void LoadData(ICollection<NetworkHost> list)
+        private void LoadData(ICollection<NetworkHost> list)
         {
             Application.Current.Dispatcher.Invoke(() => progressBar.Maximum = 0);
             foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces().Where(i => i.NetworkInterfaceType != NetworkInterfaceType.Loopback && i.OperationalStatus == OperationalStatus.Up))
@@ -41,12 +42,13 @@ namespace CBSync
                     Application.Current.Dispatcher.Invoke(() => progressBar.Maximum += network.HostCount);
                     foreach (IPAddress ip in network.IterateUsableIPs())
                     {
-                        await Task.Factory.StartNew(() => LoadTask(ip, list));
+                        LoadTask(ip, list);
                     }
                 }
             }
         }
 
+        
         private async void LoadTask(IPAddress ip, ICollection<NetworkHost> list)
         {
             Ping ping = new Ping();
@@ -64,31 +66,17 @@ namespace CBSync
                     hostname = "";
                 }
 
-                HttpWebRequest pingRequest = (HttpWebRequest)WebRequest.Create(string.Format("http://{0}:9000/api/Sync/GetPing", ip.ToString()));
-                pingRequest.ContentType = "application/json";
-                pingRequest.Method = "POST";
-                pingRequest.Timeout = 200;
-                try
+                HttpWebResponse pingResponse = new HttpSender(string.Format("http://{0}:9000/api/Sync/GetPing", ip.ToString()), 500)
+                    .Send(null)
+                    .Receive();
+                if (pingResponse != null && pingResponse.StatusCode == HttpStatusCode.OK)
                 {
-                    using (var sw = new StreamWriter(pingRequest.GetRequestStream()))
+                    Application.Current.Dispatcher.Invoke(() => list.Add(new NetworkHost()
                     {
-                        string req = "";
-                        sw.Write(req);
-                        sw.Flush();
-                    }
-                    HttpWebResponse pingResponse = (HttpWebResponse)pingRequest.GetResponse();
-                    if (pingResponse.StatusCode == HttpStatusCode.OK)
-                    {
-                        Application.Current.Dispatcher.Invoke(() => list.Add(new NetworkHost()
-                        {
-                            IP = ip.ToString(),
-                            HostName = hostname,
-                            SyncState = "-",
-                        }));
-                    }
-                }
-                catch (Exception)
-                {
+                        IP = ip.ToString(),
+                        HostName = hostname,
+                        SyncState = "-",
+                    }));
                 }
 
             }
@@ -103,7 +91,7 @@ namespace CBSync
                     finishedHandler?.Invoke(list);
                 }
             });
-
+            
         }
     }
 }

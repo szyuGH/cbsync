@@ -1,4 +1,6 @@
-﻿using System;
+﻿using CBSync.SendModels;
+using Newtonsoft.Json;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -46,15 +48,10 @@ namespace CBSync
             IntPtr handle = new WindowInteropHelper(this).EnsureHandle();
             clipboardMonitor = new ClipboardMonitor(handle);
             clipboardMonitor.ClipboardChanged += OnClipboardChange;
-
-
-            // Notification Test
-            NotifyIcon ni = new NotifyIcon();
-            ni.Icon = SystemIcons.Application;
-            ni.Visible = true;
-            ni.ShowBalloonTip(5000, "test", "hello", System.Windows.Forms.ToolTipIcon.Info);
+            
         }
         
+
         private void OnHostsLoaded(ICollection<NetworkHost> hosts)
         {
             Console.WriteLine("Finished loading hosts");
@@ -72,6 +69,15 @@ namespace CBSync
         {
             NetworkHost host = EvaluateButtonClickNetworkHost(sender);
             // TODO: Sync To
+
+            HttpWebResponse syncToResponse = new HttpSender(string.Format("http://{0}:9000/api/Sync/RequestSyncTo", host.IP.ToString()), 10000)
+                .Send(new RequestSyncToData() { Sender = Dns.GetHostName() })
+                .Receive();
+            if (syncToResponse != null && syncToResponse.StatusCode == HttpStatusCode.OK)
+            {
+                // TODO: disable other buttons and start timout timer for request
+            }
+            
         }
 
         private void SyncFromButton_Click(object sender, RoutedEventArgs e)
