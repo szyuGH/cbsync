@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace CBSync.SendModels
 {
     [Serializable]
-    public struct RequestSyncToData
+    public struct SyncRequestData
     {
         public string Sender { get; set; }
     }

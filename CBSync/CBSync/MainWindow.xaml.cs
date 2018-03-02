@@ -13,6 +13,7 @@ using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -44,13 +45,31 @@ namespace CBSync
         {
             InitializeComponent();
 
-            Task.Run(() => new HostLoader(pb_LoadStatus, MyList, OnHostsLoaded));
+            //Task.Run(() => new HostLoader(pb_LoadStatus, MyList, OnHostsLoaded));
             IntPtr handle = new WindowInteropHelper(this).EnsureHandle();
             clipboardMonitor = new ClipboardMonitor(handle);
             clipboardMonitor.ClipboardChanged += OnClipboardChange;
-            
+
+
+            dg_Hosts.CellEditEnding += Dg_Hosts_CellEditEnding; ;
         }
-        
+
+        private void Dg_Hosts_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            string value = (e.EditingElement as TextBox).Text;
+            NetworkHost nwHost = e.Row.Item as NetworkHost;
+            if (e.Column.DisplayIndex <= 1)
+            {
+                try
+                {
+                    IPHostEntry entry = Dns.GetHostEntry(value);
+                    nwHost.HostName = entry.HostName;
+                    nwHost.IP = entry.AddressList.Select(a => a.ToString()).Where(a => Regex.IsMatch(a, @"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")).FirstOrDefault();
+                    nwHost.SyncState = "-";
+                } catch { }
+            }
+            Task.Delay(100).ContinueWith(t => { Application.Current.Dispatcher.Invoke(() => dg_Hosts.Items.Refresh()); });
+        }
 
         private void OnHostsLoaded(ICollection<NetworkHost> hosts)
         {
@@ -68,10 +87,12 @@ namespace CBSync
         private void SyncToButton_Click(object sender, RoutedEventArgs e)
         {
             NetworkHost host = EvaluateButtonClickNetworkHost(sender);
+            if (host == null)
+                return;
             // TODO: Sync To
 
             HttpWebResponse syncToResponse = new HttpSender(string.Format("http://{0}:9000/api/Sync/RequestSyncTo", host.IP.ToString()), 10000)
-                .Send(new RequestSyncToData() { Sender = Dns.GetHostName() })
+                .Send(new SyncRequestData() { Sender = Dns.GetHostName() })
                 .Receive();
             if (syncToResponse != null && syncToResponse.StatusCode == HttpStatusCode.OK)
             {
@@ -83,8 +104,16 @@ namespace CBSync
         private void SyncFromButton_Click(object sender, RoutedEventArgs e)
         {
             NetworkHost host = EvaluateButtonClickNetworkHost(sender);
-            
-            // TODO: Sync From
+            if (host == null)
+                return;
+
+            HttpWebResponse syncToResponse = new HttpSender(string.Format("http://{0}:9000/api/Sync/RequestSyncFrom", host.IP.ToString()), 10000)
+                .Send(new SyncRequestData() { Sender = Dns.GetHostName() })
+                .Receive();
+            if (syncToResponse != null && syncToResponse.StatusCode == HttpStatusCode.OK)
+            {
+                // TODO: disable other buttons and start timout timer for request
+            }
         }
 
         private NetworkHost EvaluateButtonClickNetworkHost(object sender)
@@ -94,7 +123,10 @@ namespace CBSync
                 if (vis is DataGridRow)
                 {
                     var row = (DataGridRow)vis;
-                    return (NetworkHost)row.DataContext;
+                    if (row.DataContext is NetworkHost)
+                        return (NetworkHost)row.DataContext;
+                    else
+                        return null;
                 }
             }
             return null;

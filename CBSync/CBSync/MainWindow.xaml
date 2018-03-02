@@ -11,7 +11,7 @@
         <ProgressBar Name="pb_LoadStatus" HorizontalAlignment="Left" Height="16" Margin="10,293,0,0" VerticalAlignment="Top" Width="497"/>
         <DataGrid Name="dg_Hosts" HorizontalAlignment="Left" Height="278" Margin="10,10,0,0" VerticalAlignment="Top" Width="392"
                   AutoGenerateColumns="False" ItemsSource="{Binding MyList, ElementName=window}"
-                  CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False">
+                  CanUserAddRows="True" CanUserDeleteRows="False" CanUserReorderColumns="False">
             <DataGrid.Resources>
                 <Style TargetType="{x:Type DataGridColumnHeader}">
                     <Setter Property="HorizontalContentAlignment" Value="Center" />
